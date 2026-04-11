@@ -1,4 +1,4 @@
 streamlit
 yfinance
-pandas-ta-remake
+pandas-ta==0.4.67b0
 pandas
