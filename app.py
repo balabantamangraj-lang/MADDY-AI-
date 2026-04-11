@@ -17,7 +17,7 @@ cols = st.columns(5)
 for i, stock in enumerate(watchlist):
     with cols[i % 5]:
         try:
-            df = yf.download(stock, period="5d", interval="15m", progress=False)
+            df = yf.download(stock,period="1mo", interval="15m", progress=False)
             if not df.empty:
                 price = round(df['Close'].iloc[-1], 2)
                 rsi = round(ta.rsi(df['Close']).iloc[-1], 1)
