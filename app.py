@@ -6,7 +6,7 @@ import pandas_ta as ta
 st.set_page_config(page_title="Maddy AI Pro", layout="wide")
 
 st.title("🚀 Maddy AI: Live Buying Dashboard")
-st.subheader("Saint-Gobain Special Edition 🔔")
+st.subheader("Maddy Special Edition 🔔")
 
 # Stocks to track
 watchlist = ["RELIANCE.NS", "TCS.NS", "HDFCBANK.NS", "SBIN.NS", "ICICIBANK.NS", 
