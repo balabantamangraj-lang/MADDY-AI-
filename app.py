@@ -10,7 +10,7 @@ st.subheader("Saint-Gobain Special Edition 🔔")
 
 # Stocks to track
 watchlist = ["RELIANCE.NS", "TCS.NS", "HDFCBANK.NS", "SBIN.NS", "ICICIBANK.NS", 
-             "TATAMOTORS.NS", "INFY.NS", "ITC.NS", "BHARTIARTL.NS", "ADANIENT.NS"]
+             "M&M.NS","MARUTI.NS","INFY.NS", "ITC.NS", "BHARTIARTL.NS", "ADANIENT.NS"]
 
 cols = st.columns(5)
 
