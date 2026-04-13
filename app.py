@@ -30,16 +30,25 @@ for i, stock in enumerate(watchlist):
         try:
             df = yf.download(stock,period="1mo", interval="15m", progress=False)
             if not df.empty:
-                price = round(df['Close'].iloc[-1], 2)
+                                price = round(df['Close'].iloc[-1], 2)
                 rsi = round(ta.rsi(df['Close']).iloc[-1], 1)
                 ema_200 = ta.ema(df['Close'], length=200).iloc[-1]
                 
+                # Naya Volume Check Engine ⛽
+                vol_current = df['Volume'].iloc[-1]
+                vol_avg = df['Volume'].rolling(20).mean().iloc[-1]
+
                 st.metric(label=stock, value=f"₹{price}")
-                
-                if price > ema_200 and rsi > 55:
-                    st.success("🟢 BUY NOW")
+
+                # Naya AI Logic (Risk Manager ke sath) 🎯
+                if price > ema_200 and rsi > 55 and vol_current > vol_avg:
+                    target = round(price + (price * 0.01), 2)
+                    sl = round(price - (price * 0.005), 2)
+                    
+                    st.success(f"🟢 **{stock} BUY KARO!** \n\n**Kyun?** Uptrend hai (200 EMA), Speed mast hai (RSI {rsi}), aur naya Volume (Paisa) andar aaya hai! 🚀\n\n🎯 **Target:** ₹{target} | 🛑 **Stop-Loss:** ₹{sl}")
                 else:
-                    st.info("⚪ WAIT")
+                    st.info(f"⚪ **WAIT** \n\n**Kyun?** Abhi perfect setup nahi bana hai. Sabr rakho.")
+                    
                 st.caption(f"RSI: {rsi}")
         except:
             st.error(f"Error: {stock}")
