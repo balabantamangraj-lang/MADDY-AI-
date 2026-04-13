@@ -30,9 +30,16 @@ for i, stock in enumerate(watchlist):
         try:
             df = yf.download(stock,period="1mo", interval="15m", progress=False)
             if not df.empty:
-                                price = round(df['Close'].iloc[-1], 2)
-                rsi = round(ta.rsi(df['Close']).iloc[-1], 1)
-                ema_200 = ta.ema(df['Close'], length=200).iloc[-1]
+                                                if not df.empty:
+                    price = round(df['Close'].iloc[-1], 2)
+                    rsi = round(ta.rsi(df['Close']).iloc[-1], 1)
+                    ema_200 = ta.ema(df['Close'], length=200).iloc[-1]
+                    
+                    vol_current = df['Volume'].iloc[-1]
+                    vol_avg = df['Volume'].rolling(20).mean().iloc[-1]
+
+                    st.metric(label=stock, value=f"₹{price}")
+                                                    
                 
                 # Naya Volume Check Engine ⛽
                 vol_current = df['Volume'].iloc[-1]
