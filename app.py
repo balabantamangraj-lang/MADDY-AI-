@@ -2,7 +2,7 @@ import streamlit as st
 import yfinance as yf
 import pandas_ta as ta
 import requests
-import time  # ⏳ Naya Hatiyar: Time Pause
+import time
 
 # 🛑 Aapki Telegram Keys
 TELEGRAM_TOKEN = "8512309562:AAGxWXADZfyzaH6fB4vuaIORRERnZ_QV664"
@@ -12,9 +12,14 @@ def send_telegram_alert(bot_message):
     try:
         url = f"https://api.telegram.org/bot{TELEGRAM_TOKEN}/sendMessage"
         data = {"chat_id": TELEGRAM_CHAT_ID, "text": bot_message}
-        requests.post(url, data=data)
-    except:
-        pass
+        response = requests.post(url, data=data)
+        
+        # Naya Hatiyar: Agar Telegram fail hua toh screen par error dikhayega
+        if response.status_code != 200:
+            st.error(f"📱 Telegram Error: {response.text}")
+            
+    except Exception as e:
+        st.error(f"📱 Telegram Crash: {e}")
 
 # Page config
 st.set_page_config(page_title="Maddy AI Pro", layout="wide")
@@ -34,16 +39,15 @@ cols = st.columns(5)
 for i, stock in enumerate(watchlist):
     with cols[i % 5]:
         try:
-            # ⏳ Naya Fix: Har stock ke beech 1.5 second ka aaram taaki block na ho
-            time.sleep(1.5)
+            time.sleep(1.5) # Pause
             
             ticker = yf.Ticker(stock)
             df = ticker.history(period="1mo", interval="15m")
             
             if df is None or df.empty:
-                st.warning(f"⚠️ {stock}: Data Nahi Aaya")
+                pass
             elif len(df) < 200:
-                st.warning(f"⚠️ Data Kam Hai")
+                pass
             else:
                 rsi_series = ta.rsi(df['Close'])
                 ema_series = ta.ema(df['Close'], length=200)
@@ -74,6 +78,5 @@ for i, stock in enumerate(watchlist):
                     st.info(f"⚪ WAIT")
                     
         except Exception as e:
-            # Agar choti moti error aayi toh ignore karega, lal rang nahi dikhayega
             pass
             
