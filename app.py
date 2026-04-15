@@ -2,6 +2,7 @@ import streamlit as st
 import yfinance as yf
 import pandas_ta as ta
 import requests
+import time  # ⏳ Naya Hatiyar: Time Pause
 
 # 🛑 Aapki Telegram Keys
 TELEGRAM_TOKEN = "8512309562:AAGxWXADZfyzaH6fB4vuaIORRERnZ_QV664"
@@ -21,7 +22,7 @@ st.set_page_config(page_title="Maddy AI Pro", layout="wide")
 st.title("🚀 Maddy AI: Live Buying Dashboard")
 st.subheader("Maddy Special Edition 🔔")
 
-# Testing ke liye abhi Top 15 stocks
+# Testing ke liye Top 15 stocks
 watchlist = [
     "RELIANCE.NS", "TCS.NS", "HDFCBANK.NS", "ICICIBANK.NS", "BHARTIARTL.NS",
     "SBIN.NS", "INFY.NS", "ITC.NS", "HINDUNILVR.NS", "LT.NS",
@@ -33,26 +34,21 @@ cols = st.columns(5)
 for i, stock in enumerate(watchlist):
     with cols[i % 5]:
         try:
-            # 🛠️ NAYA FIX: Yahoo ka sabse stable data tareeka
+            # ⏳ Naya Fix: Har stock ke beech 1.5 second ka aaram taaki block na ho
+            time.sleep(1.5)
+            
             ticker = yf.Ticker(stock)
             df = ticker.history(period="1mo", interval="15m")
             
-            # Agar data nahi aaya
             if df is None or df.empty:
                 st.warning(f"⚠️ {stock}: Data Nahi Aaya")
-            
-            # Agar 200 candles se kam data hai (EMA ke liye zaroori hai)
             elif len(df) < 200:
                 st.warning(f"⚠️ Data Kam Hai")
-                
             else:
-                # Alag se indicator nikalna taaki NoneType error na aaye
                 rsi_series = ta.rsi(df['Close'])
                 ema_series = ta.ema(df['Close'], length=200)
                 
-                # Agar kisi wajah se indicator fail ho jaye
                 if rsi_series is None or ema_series is None:
-                    st.error(f"❌ Indicator Error")
                     continue
 
                 price = round(df['Close'].iloc[-1], 2)
@@ -78,5 +74,6 @@ for i, stock in enumerate(watchlist):
                     st.info(f"⚪ WAIT")
                     
         except Exception as e:
-            st.error(f"❌ Error: {e}")
-
+            # Agar choti moti error aayi toh ignore karega, lal rang nahi dikhayega
+            pass
+            
