@@ -21,7 +21,7 @@ st.set_page_config(page_title="Maddy AI Pro", layout="wide")
 st.title("🚀 Maddy AI: Live Buying Dashboard")
 st.subheader("Maddy Special Edition 🔔")
 
-# Testing ke liye abhi Top 15 stocks (Taaki Yahoo block na kare)
+# Testing ke liye abhi Top 15 stocks
 watchlist = [
     "RELIANCE.NS", "TCS.NS", "HDFCBANK.NS", "ICICIBANK.NS", "BHARTIARTL.NS",
     "SBIN.NS", "INFY.NS", "ITC.NS", "HINDUNILVR.NS", "LT.NS",
@@ -33,20 +33,31 @@ cols = st.columns(5)
 for i, stock in enumerate(watchlist):
     with cols[i % 5]:
         try:
-            df = yf.download(stock, period="1mo", interval="15m", progress=False)
+            # 🛠️ NAYA FIX: Yahoo ka sabse stable data tareeka
+            ticker = yf.Ticker(stock)
+            df = ticker.history(period="1mo", interval="15m")
             
             # Agar data nahi aaya
             if df is None or df.empty:
                 st.warning(f"⚠️ {stock}: Data Nahi Aaya")
             
-            # Agar 200 candles se kam data hai (EMA ke liye)
+            # Agar 200 candles se kam data hai (EMA ke liye zaroori hai)
             elif len(df) < 200:
-                st.warning(f"⚠️ {stock}: Data Kam Hai ({len(df)} candles)")
+                st.warning(f"⚠️ Data Kam Hai")
                 
             else:
+                # Alag se indicator nikalna taaki NoneType error na aaye
+                rsi_series = ta.rsi(df['Close'])
+                ema_series = ta.ema(df['Close'], length=200)
+                
+                # Agar kisi wajah se indicator fail ho jaye
+                if rsi_series is None or ema_series is None:
+                    st.error(f"❌ Indicator Error")
+                    continue
+
                 price = round(df['Close'].iloc[-1], 2)
-                rsi = round(ta.rsi(df['Close']).iloc[-1], 1)
-                ema_200 = ta.ema(df['Close'], length=200).iloc[-1]
+                rsi = round(rsi_series.iloc[-1], 1)
+                ema_200 = ema_series.iloc[-1]
                 
                 vol_current = df['Volume'].iloc[-1]
                 vol_avg = df['Volume'].rolling(20).mean().iloc[-1]
@@ -67,6 +78,5 @@ for i, stock in enumerate(watchlist):
                     st.info(f"⚪ WAIT")
                     
         except Exception as e:
-            # Agar koi aur math error aayi toh screen par print hogi!
-            st.error(f"❌ {stock} Error: {e}")
-            
+            st.error(f"❌ Error: {e}")
+
