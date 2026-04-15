@@ -5,7 +5,7 @@ import requests
 import time
 from datetime import date
 
-# 🛑 Aapki Telegram Keys (Vahi rehne di hain)
+# 🛑 Aapki Telegram Keys
 TELEGRAM_TOKEN = "8512309562:AAGxWXADZfyzaH6fB4vuaIORRERnZ_QV664"
 TELEGRAM_CHAT_ID = "7775145334"
 
@@ -17,16 +17,15 @@ def send_telegram_alert(bot_message):
     except:
         pass
 
-# Page Styling
+# Page Setup (Simple and Clean)
 st.set_page_config(page_title="Maddy AI: Pattern Expert", layout="wide")
-st.markdown("<h1 style='text-align: center; color: #00ff00;'>🚀 Maddy AI: Pattern Expert Dashboard</h1>", unsafe_allow_html=True)
+st.title("🚀 Maddy AI: Pattern Expert Dashboard")
 
 # 🧠 Memory Setup
 if 'alerted_today' not in st.session_state:
     st.session_state.alerted_today = {}
     st.session_state.current_date = date.today()
 
-# Check Watchlist
 watchlist = [
     "RELIANCE.NS", "TCS.NS", "HDFCBANK.NS", "ICICIBANK.NS", "BHARTIARTL.NS",
     "SBIN.NS", "INFY.NS", "ITC.NS", "HINDUNILVR.NS", "LT.NS",
@@ -38,51 +37,57 @@ cols = st.columns(5)
 for i, stock in enumerate(watchlist):
     with cols[i % 5]:
         try:
-            time.sleep(1.2) # Thoda sa pause rate limit se bachne ke liye
+            time.sleep(1) 
             ticker = yf.Ticker(stock)
-            df = ticker.history(period="2mo", interval="15m") # 2 months data for better EMA
+            df = ticker.history(period="3mo", interval="15m") 
             
-            if df is not None and len(df) > 200:
-                # 🕯️ CANDLESTICK PATTERN CALCULATION
-                patterns = df.ta.cdl_pattern(name=["hammer", "engulfing", "morningstar"])
+            if not df.empty and len(df) > 200:
+                # 🕯️ PATTERN DETECTION (Simplified)
+                # Hum manually check karenge taaki library ki galti na ho
+                op = df['Open']
+                hi = df['High']
+                lo = df['Low']
+                cl = df['Close']
                 
                 # Indicators
-                rsi_series = ta.rsi(df['Close'])
-                ema_series = ta.ema(df['Close'], length=200)
+                rsi = ta.rsi(cl).iloc[-1]
+                ema_200 = ta.ema(cl, length=200).iloc[-1]
+                price = round(cl.iloc[-1], 2)
                 
-                price = round(df['Close'].iloc[-1], 2)
-                rsi = rsi_series.iloc[-1]
-                ema_200 = ema_series.iloc[-1]
+                # Logic for Bullish Patterns
+                pattern_found = ""
                 
-                # Pattern detection logic
-                current_pattern = ""
-                # Check current and previous candle
-                if patterns['CDL_ENGULFING'].iloc[-1] > 0: current_pattern = "🔥 Bullish Engulfing"
-                elif patterns['CDL_HAMMER'].iloc[-1] > 0: current_pattern = "🔨 Hammer"
-                elif patterns['CDL_MORNINGSTAR'].iloc[-1] > 0: current_pattern = "🌅 Morning Star"
+                # 1. Bullish Engulfing
+                if cl.iloc[-1] > op.iloc[-2] and op.iloc[-1] < cl.iloc[-2] and cl.iloc[-2] < op.iloc[-2]:
+                    pattern_found = "🔥 Bullish Engulfing"
+                
+                # 2. Hammer
+                body = abs(cl.iloc[-1] - op.iloc[-1])
+                lower_shadow = min(op.iloc[-1], cl.iloc[-1]) - lo.iloc[-1]
+                if lower_shadow > (2 * body) and body > 0:
+                    pattern_found = "🔨 Hammer"
 
-                # Metrics Display
+                # UI Display
                 st.metric(label=stock, value=f"₹{price}")
 
-                # 🛠️ THE STRATEGY ENGINE
-                if price > ema_200 and rsi > 55 and current_pattern != "":
-                    target = round(price + (price * 0.012), 2) # 1.2% Target
-                    sl = round(price - (price * 0.006), 2)    # 0.6% SL
-                    
-                    st.success(f"✅ BUY: {current_pattern}")
-                    st.write(f"🎯 Tgt: {target} | 🛑 SL: {sl}")
+                if price > ema_200 and rsi > 55 and pattern_found != "":
+                    target = round(price * 1.012, 2)
+                    sl = round(price * 0.994, 2)
+                    st.success(f"✅ {pattern_found}")
+                    st.caption(f"🎯 {target} | 🛑 {sl}")
 
-                    # Telegram Trigger (Only once per day per stock)
                     if stock not in st.session_state.alerted_today:
-                        msg = f"🌟 MADDY PATTERN ALERT 🌟\n\n✅ STOCK: {stock}\n🕯️ PATTERN: {current_pattern}\n💰 PRICE: ₹{price}\n🎯 TARGET: ₹{target}\n🛑 STOP-LOSS: ₹{sl}\n⚡ RSI: {round(rsi,1)}"
+                        msg = f"🌟 MADDY PATTERN ALERT 🌟\n\n✅ {stock}\n🕯️ {pattern_found}\n💰 ₹{price}\n🎯 Tgt: ₹{target}\n🛑 SL: ₹{sl}"
                         send_telegram_alert(msg)
                         st.session_state.alerted_today[stock] = True
                 
-                elif current_pattern != "":
-                    st.warning(f"👀 {current_pattern} (Waiting for Confirmation)")
+                elif pattern_found != "":
+                    st.warning(f"👀 {pattern_found}")
                 else:
-                    st.info("⚪ Searching Patterns...")
+                    st.info("⚪ Searching...")
+            else:
+                st.error("Data Missing")
                     
         except Exception as e:
-            st.error(f"Error in {stock}")
+            pass
             
