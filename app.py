@@ -17,12 +17,15 @@ def send_telegram_alert(bot_message):
     except:
         pass
 
-st.set_page_config(page_title="Maddy AI: Pattern Expert", layout="wide")
-st.title("🚀 Maddy AI: Pattern Expert Dashboard")
+# Page Settings
+st.set_page_config(page_title="Maddy AI Pro", layout="wide")
+st.title("🚀 Maddy AI: Live Dashboard")
 
+# Memory for Spam Control
 if 'alerted_today' not in st.session_state:
     st.session_state.alerted_today = {}
 
+# Watchlist (Stock list thodi choti ki hai taaki fast load ho)
 watchlist = ["RELIANCE.NS", "TCS.NS", "HDFCBANK.NS", "ICICIBANK.NS", "SBIN.NS", "INFY.NS", "ITC.NS", "ADANIENT.NS"]
 
 cols = st.columns(4)
@@ -30,37 +33,36 @@ cols = st.columns(4)
 for i, stock in enumerate(watchlist):
     with cols[i % 4]:
         try:
-            time.sleep(1)
+            # ⏳ Sirf 0.5 sec ka gap
+            time.sleep(0.5)
             ticker = yf.Ticker(stock)
             df = ticker.history(period="1mo", interval="15m")
             
-            if not df.empty:
-                # Indicators
+            if not df.empty and len(df) > 50:
+                # Indicators (Wahi purana solid wala)
                 rsi = ta.rsi(df['Close']).iloc[-1]
                 ema_200 = ta.ema(df['Close'], length=200).iloc[-1]
                 price = round(df['Close'].iloc[-1], 2)
-
-                # Simplified Pattern Detection
-                # 🔨 Hammer Check
-                is_hammer = (df['High'] - df['Low'] > 3 * abs(df['Open'] - df['Close'])) and \
-                            (df['Close'] > df['Open']) and \
-                            (df['High'] - df['Close'] < 0.1 * (df['High'] - df['Low']))
                 
-                pattern_found = ""
-                if is_hammer.iloc[-1]: pattern_found = "🔨 Hammer"
+                vol_current = df['Volume'].iloc[-1]
+                vol_avg = df['Volume'].rolling(20).mean().iloc[-1]
 
                 st.metric(label=stock, value=f"₹{price}")
 
-                if price > ema_200 and rsi > 55:
-                    if pattern_found != "":
-                        st.success(f"✅ BUY: {pattern_found}")
-                        if stock not in st.session_state.alerted_today:
-                            send_telegram_alert(f"🚀 Maddy Alert: {stock} @ ₹{price}\nPattern: {pattern_found}")
-                            st.session_state.alerted_today[stock] = True
-                    else:
-                        st.info("⚪ Wait for Pattern")
+                if price > ema_200 and rsi > 55 and vol_current > vol_avg:
+                    target = round(price + (price * 0.01), 2)
+                    sl = round(price - (price * 0.005), 2)
+                    
+                    st.success(f"🟢 **BUY KARO!**")
+                    st.write(f"🎯 {target} | 🛑 {sl}")
+
+                    # Telegram (Only once)
+                    if stock not in st.session_state.alerted_today:
+                        alert_msg = f"🚀 Maddy Alert: {stock}\n💰 Price: ₹{price}\n🎯 Target: ₹{target}\n🛑 SL: ₹{sl}"
+                        send_telegram_alert(alert_msg)
+                        st.session_state.alerted_today[stock] = True
                 else:
-                    st.info("⚪ Searching...")
+                    st.info("⚪ WAITING")
         except:
-            st.error("⚠️ Loading...")
+            st.error("⚠️ Data Error")
             
