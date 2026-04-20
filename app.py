@@ -51,7 +51,7 @@ for i, stock in enumerate(watchlist):
 
                 # --- SIGNAL ENGINE ---
                 # Check: Trend is UP + Momentum is High + Big Players entering (Volume)
-                if price > ema_200 and rsi > 55 and vol_current > (vol_avg * 1.3):
+                if price > ema_200 and rsi > 30 and vol_current > (vol_avg * 1.3):
                     target = round(price + (price * 0.012), 2)
                     sl = round(price - (price * 0.006), 2)
                     
