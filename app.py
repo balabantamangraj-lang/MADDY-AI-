@@ -7,7 +7,7 @@ from datetime import date
 
 # 🛑 AAPKI TELEGRAM KEYS (Vahi purani)
 TELEGRAM_TOKEN = "8512309562:AAGxWXADZfyzaH6fB4vuaIORRERnZ_QV664"
-TELEGRAM_CHAT_ID = "7775145334"
+TELEGRAM_CHAT_ID = "7775145334","1003812569294"
 
 def send_telegram_alert(bot_message):
     try:
@@ -26,7 +26,7 @@ if 'alerted_today' not in st.session_state:
     st.session_state.alerted_today = {}
 
 # 🔥 Watchlist (Top Stocks for Fast Loading)
-watchlist = ["RELIANCE.NS", "TCS.NS", "INFY.NS", "HCLTECH.NS", "ITC.NS", "SBIN.NS", "HDFCBANK.NS", "ICICIBANK.NS", "ADANIENT.NS"]
+watchlist = ["RELIANCE.NS", "TCS.NS", "INFY.NS", "HCLTECH.NS", "ITC.NS", "SBIN.NS", "HDFCBANK.NS", "ICICIBANK.NS", "ADANIENT.NS","ZOMATO.NS", "PFC.NS", "RECLTD.NS", "TATASTEEL.NS", "JSWSTEEL.NS"]
 
 cols = st.columns(3) # 3 Column layout for better mobile view
 
