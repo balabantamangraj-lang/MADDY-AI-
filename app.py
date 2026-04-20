@@ -16,6 +16,39 @@ def send_telegram_alert(bot_message):
         requests.post(url, data=data)
     except:
         pass
+import streamlit as st
+# ... baki imports ...
+
+TELEGRAM_TOKEN = "8512309562:AAGxWXADZfyzaH6fB4vuaIORRERnZ_QV664"
+TELEGRAM_CHAT_ID = "-1003812569294"  # <--- Sirf ek ID honi chahiye
+
+# 👇 YAHAN PAR PASTE KIJIYE (Functions)
+def check_patterns(df):
+    if len(df) < 2: return ""
+    prev, curr = df.iloc[-2], df.iloc[-1]
+    body = abs(curr['Close'] - curr['Open'])
+    lower_wick = min(curr['Open'], curr['Close']) - curr['Low']
+    upper_wick = curr['High'] - max(curr['Open'], curr['Close'])
+
+    if (prev['Close'] < prev['Open']) and (curr['Close'] > curr['Open']) and \
+       (curr['Open'] <= prev['Close']) and (curr['Close'] >= prev['Open']):
+        return "🔥 Bullish Engulfing Detected!"
+
+    if lower_wick > (2 * body) and upper_wick < (0.5 * body):
+        return "🔨 Hammer Pattern Found!"
+    return ""
+
+def send_telegram_alert(bot_message):
+    try:
+        url = f"https://api.telegram.org/bot{TELEGRAM_TOKEN}/sendMessage"
+        data = {"chat_id": TELEGRAM_CHAT_ID, "text": bot_message}
+        requests.post(url, data=data)
+    except:
+        pass
+# 👆 YAHAN TAK
+
+# Iske niche aapki watchlist shuru hogi
+watchlist = ["RELIANCE.NS", "TCS.NS", ...]
 
 # --- Page UI Settings ---
 st.set_page_config(page_title="Maddy AI Pro", layout="wide")
