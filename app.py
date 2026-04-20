@@ -69,7 +69,7 @@ for i, stock in enumerate(watchlist):
         except Exception as e:
             st.warning(f"⚠️ {stock} Scanning...")
 
-# --- PRO TIPS FOR ACCURACY ---
+# --- PRO TIPS FOR ACCURACY ----
 st.divider()
 st.subheader("💡 Accuracy Checklist (Manual Confirmation)")
 st.write("Jab Maddy alert de, TradingView par ye zaroor dekhein:")
