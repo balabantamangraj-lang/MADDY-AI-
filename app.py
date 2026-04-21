@@ -7,7 +7,7 @@ from datetime import date
 
 # 🛑 AAPKI TELEGRAM KEYS (Vahi purani)
 TELEGRAM_TOKEN = "8512309562:AAGxWXADZfyzaH6fB4vuaIORRERnZ_QV664"
-TELEGRAM_CHAT_ID = "7775145334","1003812569294"
+TELEGRAM_CHAT_ID = "7775145334",
 
 def send_telegram_alert(bot_message):
     try:
