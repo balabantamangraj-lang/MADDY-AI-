@@ -6,27 +6,33 @@ st.set_page_config(page_title="Maddy AI Lab", layout="wide")
 st.title("🧪 Maddy AI: 30-Day Backtest Lab")
 st.write("Yeh tool check karega ki pichle 30 dino mein Maddy ko kitne signals mile.")
 
-# Dropdown menu stock select karne ke liye
 stock_symbol = st.selectbox("Stock Select Kijiye:", ["RELIANCE.NS", "HDFCBANK.NS", "TCS.NS", "SBIN.NS", "INFY.NS", "PAYTM.NS"])
 
 if st.button("Start 30-Day Scan"):
     with st.spinner(f"⏳ {stock_symbol} ka data download ho raha hai..."):
-        # 30 din ka data, 15 minute ke timeframe par
+        # Data download
         df = yf.download(stock_symbol, period="1mo", interval="1h")
         
         if df.empty:
             st.error("Data download nahi hua! Yahoo Finance issue.")
         else:
+            # 🛠️ THE FIX: Remove Yahoo's Double Layer (MultiIndex)
+            if isinstance(df.columns, pd.MultiIndex):
+                df.columns = df.columns.droplevel(1)
+                
+            # Extra safe: remove any empty rows
+            df = df.dropna()
+
             signals_found = 0
             st.success(f"✅ Data Loaded! Total Candles: {len(df)}")
             
             st.subheader("📊 Signals History:")
             
-            # Har candle ko check karne ka loop
             for i in range(5, len(df)):
                 curr = df.iloc[i]
                 prev = df.iloc[i-1]
                 
+                # Math extraction
                 body = abs(curr['Close'] - curr['Open'])
                 lower_wick = min(curr['Open'], curr['Close']) - curr['Low']
                 upper_wick = curr['High'] - max(curr['Open'], curr['Close'])
@@ -48,4 +54,4 @@ if st.button("Start 30-Day Scan"):
             st.metric(label="Total Signals Found in 30 Days", value=signals_found)
             if signals_found > 0:
                 st.balloons()
-              
+                
