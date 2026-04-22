@@ -12,7 +12,7 @@ stock_symbol = st.selectbox("Stock Select Kijiye:", ["RELIANCE.NS", "HDFCBANK.NS
 if st.button("Start 30-Day Scan"):
     with st.spinner(f"⏳ {stock_symbol} ka data download ho raha hai..."):
         # 30 din ka data, 15 minute ke timeframe par
-        df = yf.download(stock_symbol, period="1mo", interval="15m")
+        df = yf.download(stock_symbol, period="1mo", interval="1h")
         
         if df.empty:
             st.error("Data download nahi hua! Yahoo Finance issue.")
