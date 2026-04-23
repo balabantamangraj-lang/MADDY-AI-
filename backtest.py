@@ -2,14 +2,14 @@ import streamlit as st
 import yfinance as yf
 import pandas as pd
 
-st.set_page_config(page_title="Maddy AI: Price Action Lab", layout="wide")
-st.title("⚡ Maddy AI: Pure Price Action (Support/Resistance)")
-st.write("No RSI, No EMA! Sirf Zameen (Support) aur Chhat (Resistance) par trade! 🏛️")
+st.set_page_config(page_title="Maddy AI: The Masterpiece", layout="wide")
+st.title("🛡️ Maddy AI: The 'Concrete Floor' Masterpiece")
+st.write("Ab Maddy 1 din ka kachra nahi, 4 din ka solid Support/Resistance dekhega! (Smart Money Concept)")
 
 stock_symbol = st.selectbox("Stock Select Kijiye:", ["RELIANCE.NS", "CIPLA.NS", "TATACHEM.NS", "TRENT.NS", "HINDALCO.NS", "HDFCBANK.NS", "AMBUJACEM.NS"])
 
-if st.button("Start Price Action Scan"):
-    with st.spinner(f"⏳ {stock_symbol} ka 15-min data load ho raha hai..."):
+if st.button("Start Masterpiece Scan"):
+    with st.spinner(f"⏳ {stock_symbol} ka data load ho raha hai... (Jadoo shuru)"):
         df = yf.download(stock_symbol, period="1mo", interval="15m")
         
         if df.empty:
@@ -19,17 +19,16 @@ if st.button("Start Price Action Scan"):
                 df.columns = df.columns.droplevel(1)
             df = df.dropna()
 
-            # --- PURE PRICE ACTION ALGO ---
-            # Pichli 20 candles ka sabse Low (Support) aur sabse High (Resistance)
-            df['Support'] = df['Low'].rolling(window=20).min().shift(1)
-            df['Resistance'] = df['High'].rolling(window=20).max().shift(1)
+            # --- PRO LEVEL UPGRADE: 100 Candles (Approx 4 Days) Concrete Floor ---
+            df['Support_100'] = df['Low'].rolling(window=100).min().shift(1)
+            df['Resistance_100'] = df['High'].rolling(window=100).max().shift(1)
             df['Vol_MA20'] = df['Volume'].rolling(window=20).mean()
 
             total_signals, target_hit, sl_hit, pending = 0, 0, 0, 0
-            st.success("✅ Support/Resistance Zones Loaded! Scanning...")
-            st.subheader("📊 Price Action Trade Results:")
+            st.success("✅ Concrete Zones Locked! Scanning Operator Traps...")
+            st.subheader("📊 The Final Verdict:")
             
-            start_index = max(25, len(df) - 400) 
+            start_index = max(105, len(df) - 400) 
             
             for i in range(start_index, len(df) - 1): 
                 curr = df.iloc[i]
@@ -42,43 +41,29 @@ if st.button("Start Price Action Scan"):
                 pattern_time = df.index[i].strftime("%Y-%m-%d %H:%M")
                 pattern, trade_type, entry, sl, target = "", "", 0, 0, 0
                 
-                # Zone Checks (Price Zameen ya Chhat ke 0.5% ke andar hona chahiye)
-                is_near_support = curr['Low'] <= (curr['Support'] * 1.005)
-                is_near_resistance = curr['High'] >= (curr['Resistance'] * 0.995)
-                is_high_volume = curr['Volume'] > curr['Vol_MA20'] # Volume average se zyada
+                # Zone Logic: Price ko solid support/resistance ki range (0.3%) mein hona chahiye
+                is_near_support = curr['Low'] <= (curr['Support_100'] * 1.003) and curr['Low'] >= (curr['Support_100'] * 0.997)
+                is_near_resistance = curr['High'] >= (curr['Resistance_100'] * 0.997) and curr['High'] <= (curr['Resistance_100'] * 1.003)
                 
-                # 🟢 BUY RULE: Support ke paas + High Volume
+                # Badi volume honi chahiye (Operator entry)
+                is_high_volume = curr['Volume'] > (1.2 * curr['Vol_MA20']) 
+                
                 if is_near_support and is_high_volume: 
-                    # 1. Hammer at Support
+                    # 1. Hammer at Concrete Support
                     if lower_wick > (2 * body) and upper_wick < (0.5 * body) and curr['Close'] > prev['Close']:
-                        pattern, trade_type = "🔨 Hammer @ Support", "BUY"
+                        pattern, trade_type = "🔨 Concrete Hammer", "BUY"
                         entry = curr['High'] + 0.50
-                        sl = curr['Low'] - 1.00 # Buffer for Operator SL Hunting
+                        # Operator Shield: SL is safe below the major 4-day support
+                        sl = curr['Support_100'] * 0.995 
                         target = entry + (1.5 * abs(entry - sl))
                         
-                    # 2. Bullish Engulfing at Support
-                    elif (prev['Close'] < prev['Open']) and (curr['Close'] > curr['Open']) and \
-                         (curr['Open'] <= prev['Close']) and (curr['Close'] >= prev['Open']):
-                        pattern, trade_type = "🔥 Bull Engulf @ Support", "BUY"
-                        entry = curr['High'] + 0.50
-                        sl = curr['Low'] - 1.00
-                        target = entry + (1.5 * abs(entry - sl))
-
-                # 🔴 SELL RULE: Resistance ke paas + High Volume
                 if is_near_resistance and is_high_volume:
-                    # 3. Shooting Star at Resistance
+                    # 2. Shooting Star at Concrete Resistance
                     if upper_wick > (2 * body) and lower_wick < (0.5 * body) and curr['Close'] < prev['Close']:
-                        pattern, trade_type = "☄️ Shooting Star @ Resist", "SELL"
+                        pattern, trade_type = "☄️ Concrete Shooting Star", "SELL"
                         entry = curr['Low'] - 0.50
-                        sl = curr['High'] + 1.00 # Buffer
-                        target = entry - (1.5 * abs(entry - sl))
-                        
-                    # 4. Bearish Engulfing at Resistance
-                    elif (prev['Close'] > prev['Open']) and (curr['Close'] < curr['Open']) and \
-                         (curr['Open'] >= prev['Close']) and (curr['Close'] <= prev['Open']):
-                        pattern, trade_type = "🩸 Bear Engulf @ Resist", "SELL"
-                        entry = curr['Low'] - 0.50
-                        sl = curr['High'] + 1.00
+                        # Operator Shield: SL is safe above the major 4-day resistance
+                        sl = curr['Resistance_100'] * 1.005
                         target = entry - (1.5 * abs(entry - sl))
 
                 if pattern != "":
@@ -112,8 +97,8 @@ if st.button("Start Price Action Scan"):
             completed_trades = target_hit + sl_hit
             if completed_trades > 0:
                 win_rate = (target_hit / completed_trades) * 100
-                st.info(f"🏆 Maddy Price Action Win Rate: {round(win_rate, 2)}%")
+                st.info(f"🏆 Maddy Pro Win Rate: {round(win_rate, 2)}%")
                 if win_rate >= 50: st.balloons()
             else:
-                st.info("😎 No trades at zones today. Capital protected!")
+                st.info("😎 Operator ko trap karne ka mauka nahi mila. Capital 100% Safe!")
                 
