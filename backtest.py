@@ -8,7 +8,9 @@ st.title("🦅 Maddy AI: The Ultimate Master Dashboard")
 st.write("Intraday (6-Point) ⚡ + Swing (5-Point) 🚀 Analysis Active!")
 
 watchlist = [
-    "INDOTECH.NS", "STLTECH.NS", "LUXIND.NS", "TRENT.NS", 
+    "TITAN.NS", "POLICYBZR.NS", "LODHA.NS", 
+    "TATAPOWER.NS", "ADANIPORTS.NS", "RELIANCE.NS", 
+    "HDFCBANK.NS", "INDOTECH.NS", "STLTECH.NS", "LUXIND.NS", "TRENT.NS", 
     "TATACHEM.NS", "RELIANCE.NS", "CIPLA.NS", "HDFCBANK.NS", "SBIN.NS"
 ]
 
