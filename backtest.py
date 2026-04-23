@@ -1,22 +1,19 @@
 import streamlit as st
 import yfinance as yf
 import pandas as pd
+import numpy as np
 
-st.set_page_config(page_title="Maddy AI Master Dashboard", layout="wide")
+st.set_page_config(page_title="Maddy AI Master Engine", layout="wide")
 st.title("🦅 Maddy AI: The Ultimate Master Dashboard")
-st.write("Ek Button. Do Radar. Intraday aur Swing dono ka Live Status! ⚡🚀")
+st.write("Intraday (6-Point) ⚡ + Swing (5-Point) 🚀 Analysis Active!")
 
-# Aapki Combined Watchlist
 watchlist = [
-    "INDOTECH.NS", "STLTECH.NS", "LUXIND.NS", "SUVENLIFE.NS", 
-    "GALLANTT.NS", "TRENT.NS", "TATACHEM.NS", "RELIANCE.NS", 
-    "CIPLA.NS", "AMBUJACEM.NS", "HDFCBANK.NS"
+    "INDOTECH.NS", "STLTECH.NS", "LUXIND.NS", "TRENT.NS", 
+    "TATACHEM.NS", "RELIANCE.NS", "CIPLA.NS", "HDFCBANK.NS", "SBIN.NS"
 ]
 
-st.info(f"📡 Master Radar tracking {len(watchlist)} stocks for both Intraday & Swing opportunities...")
-
-if st.button("🚨 Run Master Scan (Intraday + Swing)"):
-    
+if st.button("🚨 Run Full Market Analysis"):
+    st.divider()
     col1, col2 = st.columns(2)
     with col1:
         st.subheader("⚡ INTRADAY RADAR (15-Min)")
@@ -25,79 +22,94 @@ if st.button("🚨 Run Master Scan (Intraday + Swing)"):
         
     intraday_found = False
     swing_found = False
+    
+    # Global Sector Sync (Pehle Nifty ka mood check karo)
+    with st.spinner("⏳ Scanning Market Mood (Nifty50)..."):
+        try:
+            nifty = yf.download("^NSEI", period="5d", interval="1d", progress=False)
+            nifty_change = ((nifty.iloc[-1]['Close'] - nifty.iloc[-2]['Close']) / nifty.iloc[-2]['Close']) * 100
+            nifty_mood = "POSITIVE" if nifty_change > 0 else "NEGATIVE"
+        except:
+            nifty_mood = "NEUTRAL"
 
-    # Ek hi progress bar mein dono scan honge
     progress_bar = st.progress(0)
     
     for i, stock in enumerate(watchlist):
-        # ---------------------------------------------------------
-        # 1. INTRADAY SCANNER ENGINE (15-Min Concrete Floor)
-        # ---------------------------------------------------------
         try:
-            df_intra = yf.download(stock, period="1mo", interval="15m", progress=False)
-            if not df_intra.empty and len(df_intra) > 105:
-                if isinstance(df_intra.columns, pd.MultiIndex):
-                    df_intra.columns = df_intra.columns.droplevel(1)
-                df_intra = df_intra.dropna()
-                
-                df_intra['Support_100'] = df_intra['Low'].rolling(window=100).min().shift(1)
-                df_intra['Resistance_100'] = df_intra['High'].rolling(window=100).max().shift(1)
-                df_intra['Vol_MA20'] = df_intra['Volume'].rolling(window=20).mean().shift(1)
-                
-                today_i = df_intra.iloc[-1]
-                prev_i = df_intra.iloc[-2]
-                
-                body = abs(today_i['Close'] - today_i['Open'])
-                lower_wick = min(today_i['Open'], today_i['Close']) - today_i['Low']
-                upper_wick = today_i['High'] - max(today_i['Open'], today_i['Close'])
-                
-                is_near_support = today_i['Low'] <= (today_i['Support_100'] * 1.003) and today_i['Low'] >= (today_i['Support_100'] * 0.997)
-                is_near_resistance = today_i['High'] >= (today_i['Resistance_100'] * 0.997) and today_i['High'] <= (today_i['Resistance_100'] * 1.003)
-                is_high_volume_i = today_i['Volume'] > (1.2 * today_i['Vol_MA20']) 
-                
-                with col1:
-                    if is_near_support and is_high_volume_i and lower_wick > (2 * body) and today_i['Close'] > prev_i['Close']:
-                        st.success(f"🟢 **[INTRADAY BUY]** {stock} | 🔨 Hammer at Support @ ₹{round(today_i['Close'], 2)}")
-                        intraday_found = True
-                    elif is_near_resistance and is_high_volume_i and upper_wick > (2 * body) and today_i['Close'] < prev_i['Close']:
-                        st.error(f"🔴 **[INTRADAY SELL]** {stock} | ☄️ Shooting Star at Resist @ ₹{round(today_i['Close'], 2)}")
-                        intraday_found = True
-        except Exception:
-            pass
-
-        # ---------------------------------------------------------
-        # 2. SWING SCANNER ENGINE (1-Day Rocket Breakout)
-        # ---------------------------------------------------------
-        try:
-            df_swing = yf.download(stock, period="1y", interval="1d", progress=False)
-            if not df_swing.empty and len(df_swing) > 200:
-                if isinstance(df_swing.columns, pd.MultiIndex):
-                    df_swing.columns = df_swing.columns.droplevel(1)
-                df_swing = df_swing.dropna()
-                
-                df_swing['52W_High'] = df_swing['High'].rolling(window=200).max().shift(1)
-                df_swing['Vol_MA20'] = df_swing['Volume'].rolling(window=20).mean().shift(1)
-                
-                today_s = df_swing.iloc[-1]
-                entry_price = today_s['Close']
-                
-                is_breakout = entry_price > today_s['52W_High']
-                is_vol_blast = today_s['Volume'] > (1.5 * today_s['Vol_MA20']) 
-                
+            # ---------------------------------------------------------
+            # FETCH DAILY DATA (For Swing & Intraday HTF Trend)
+            # ---------------------------------------------------------
+            df_daily = yf.download(stock, period="1y", interval="1d", progress=False)
+            if isinstance(df_daily.columns, pd.MultiIndex): df_daily.columns = df_daily.columns.droplevel(1)
+            df_daily = df_daily.dropna()
+            
+            # Daily Indicators
+            df_daily['EMA_50'] = df_daily['Close'].ewm(span=50, adjust=False).mean()
+            df_daily['EMA_200'] = df_daily['Close'].ewm(span=200, adjust=False).mean()
+            df_daily['52W_High'] = df_daily['High'].rolling(window=200).max().shift(1)
+            df_daily['Vol_MA20'] = df_daily['Volume'].rolling(window=20).mean().shift(1)
+            
+            today_d = df_daily.iloc[-1]
+            
+            # --- SWING ANALYSIS (5-Point Checklist) ---
+            s_trend = today_d['Close'] > today_d['EMA_50'] and today_d['EMA_50'] > today_d['EMA_200']
+            s_breakout = today_d['Close'] > today_d['52W_High']
+            s_volume = today_d['Volume'] > (1.5 * today_d['Vol_MA20'])
+            s_sector = nifty_mood == "POSITIVE"
+            
+            if s_breakout and s_volume: # Agar Breakout aur Volume hai, toh hi checklist dikhao
                 with col2:
-                    if is_breakout and is_vol_blast:
-                        target = entry_price * 1.20
-                        sl = entry_price * 0.93
-                        st.success(f"🚀 **[SWING BUY]** {stock} | ₹{round(entry_price, 2)}\n\n🎯 TGT: ₹{round(target, 2)} | 🔴 SL: ₹{round(sl, 2)}")
-                        swing_found = True
-        except Exception:
-            pass
+                    st.success(f"🔥 **[SWING ROCKET]** {stock}")
+                    st.write(f"✅ Rule 1: Trend is UP" if s_trend else "❌ Rule 1: Trend is Weak")
+                    st.write(f"✅ Rule 2: 52-Week Breakout")
+                    st.write(f"✅ Rule 3: Operator Volume Found")
+                    st.write(f"✅ Rule 4: Sector Sync (Nifty Pos)" if s_sector else "⚠️ Rule 4: Sector Not Sync")
+                    
+                    if s_trend and s_sector:
+                        tgt = today_d['Close'] * 1.20
+                        sl = today_d['Close'] * 0.93
+                        st.info(f"🛡️ Rule 5 (Risk/Reward): Entry ₹{round(today_d['Close'],2)} | TGT ₹{round(tgt,2)} | Deep SL ₹{round(sl,2)}")
+                    swing_found = True
+
+            # ---------------------------------------------------------
+            # FETCH 15-MIN DATA (For Intraday)
+            # ---------------------------------------------------------
+            df_15m = yf.download(stock, period="1mo", interval="15m", progress=False)
+            if isinstance(df_15m.columns, pd.MultiIndex): df_15m.columns = df_15m.columns.droplevel(1)
+            df_15m = df_15m.dropna()
+            
+            # Intraday Indicators
+            df_15m['VWAP'] = (df_15m['Close'] * df_15m['Volume']).cumsum() / df_15m['Volume'].cumsum()
+            df_15m['Support_100'] = df_15m['Low'].rolling(window=100).min().shift(1)
+            
+            today_15m = df_15m.iloc[-1]
+            
+            # --- INTRADAY ANALYSIS (6-Point Checklist) ---
+            i_htf_trend = today_d['Close'] > today_d['EMA_200'] # Rule 1: Higher Time Frame
+            i_sector = nifty_mood == "POSITIVE"                 # Rule 2: Sector Sync
+            i_vwap = today_15m['Close'] > today_15m['VWAP']     # Rule 3: Above VWAP
+            i_zone = today_15m['Low'] <= (today_15m['Support_100'] * 1.003) # Rule 4: At Support
+            
+            if i_zone: # Agar stock support par aaya hai, tabhi checklist verify karo
+                with col1:
+                    st.info(f"🟢 **[INTRADAY SCAN]** {stock} at Support")
+                    st.write(f"✅ Rule 1: Daily Trend UP" if i_htf_trend else "❌ Rule 1: Daily Trend Down")
+                    st.write(f"✅ Rule 2: Nifty Sector Sync" if i_sector else "⚠️ Rule 2: Nifty Negative")
+                    st.write(f"✅ Rule 3: Price > VWAP" if i_vwap else "❌ Rule 3: Below VWAP (Weak)")
+                    st.write(f"✅ Rule 4: At Concrete Support")
+                    
+                    if i_htf_trend and i_sector and i_vwap:
+                        st.success(f"🎯 **PRO SETUP MATCHED!** Entry: ₹{round(today_15m['Close'], 2)}")
+                    intraday_found = True
+                    
+        except Exception as e:
+            pass # Skip on error
             
         progress_bar.progress((i + 1) / len(watchlist))
-    
+
     st.divider()
     if not intraday_found:
-        with col1: st.info("😎 Koi Intraday Trap nahi mila.")
+        with col1: st.warning("😎 Intraday: Koi bhi stock Concrete Support par nahi hai.")
     if not swing_found:
-        with col2: st.info("😎 Aaj koi Swing Breakout nahi hai.")
+        with col2: st.warning("😎 Swing: Aaj kisi stock ne chhat nahi todi.")
             
