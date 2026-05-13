@@ -8,13 +8,13 @@ from datetime import date
 # 🛑 AAPKI TELEGRAM KEYS
 TELEGRAM_TOKEN = "8512309562:AAGxWXADZfyzaH6fB4vuaIORRERnZ_QV664"
 TELEGRAM_CHAT_ID = "-1003812569294"
-
-# --- 1. MEGA PATTERN SCANNER (8 Patterns Unified) ---
+# --- 1. MEGA PATTERN SCANNER (Candlestick + Advanced Chart Patterns) ---
 def check_patterns(df):
-    if len(df) < 5: return "", 0, 0, 0
+    if len(df) < 25: return "", 0, 0, 0 # Advanced patterns ke liye zyada data chahiye
     
     prev2, prev, curr = df.iloc[-3], df.iloc[-2], df.iloc[-1]
     
+    # Basic Candlestick Math
     body = abs(curr['Close'] - curr['Open'])
     lower_wick = min(curr['Open'], curr['Close']) - curr['Low']
     upper_wick = curr['High'] - max(curr['Open'], curr['Close'])
@@ -22,6 +22,36 @@ def check_patterns(df):
 
     pattern, entry, sl, target = "", 0, 0, 0
 
+    # ==========================================
+    # 🌟 ADVANCED CHART PATTERNS (Macro Vision)
+    # ==========================================
+    
+    # 1. 📦 THE PRESSURE COOKER (Consolidation Box Breakout)
+    last_20_days = df.iloc[-21:-1] 
+    box_high = last_20_days['High'].max()
+    box_low = last_20_days['Low'].min()
+    box_range_percent = ((box_high - box_low) / box_low) * 100
+    
+    if box_range_percent < 6.0 and curr['Close'] > box_high:
+        pattern = "📦 Pressure Cooker (Box Breakout) BUY"
+        entry = curr['Close'] + 0.50
+        sl = box_low 
+        target = entry + (2 * (entry - sl))
+        return pattern, entry, sl, target
+
+    # 2. 📈 THE "W" PATTERN (Double Bottom Reversal)
+    recent_support = df['Low'].iloc[-20:-5].min()
+    if curr['Close'] > prev['Close'] and (curr['Low'] <= recent_support * 1.01) and (curr['Low'] >= recent_support * 0.99):
+         pattern = "📈 'W' Pattern (Double Bottom) BUY"
+         entry = curr['High'] + 0.50
+         sl = recent_support * 0.99 
+         target = entry + (2 * (entry - sl))
+         return pattern, entry, sl, target
+
+    # ==========================================
+    # 🕯️ CANDLESTICK PATTERNS (Micro Vision)
+    # ==========================================
+    
     # 1. ⚖️ DOJI
     if body <= (curr['High'] - curr['Low']) * 0.1:
         pattern = "⚖️ Doji Pattern"
@@ -75,7 +105,7 @@ def check_patterns(df):
         entry = curr['High'] + 0.50
         sl = curr['Low'] - 0.50
 
-    # --- Target Calculation (1:2 Risk Reward) ---
+    # --- Target Calculation ---
     if pattern != "":
         if "SELL" in pattern:
             target = entry - (2 * abs(sl - entry)) 
@@ -83,6 +113,9 @@ def check_patterns(df):
             target = entry + (2 * abs(entry - sl)) 
 
     return pattern, entry, sl, target 
+
+
+
 
 # --- 2. TELEGRAM ALERT ENGINE ---
 def send_telegram_alert(bot_message):
