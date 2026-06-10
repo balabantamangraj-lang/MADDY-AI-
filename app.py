@@ -7,7 +7,7 @@ from datetime import date
 
 # 🛑 AAPKI TELEGRAM KEYS
 TELEGRAM_TOKEN = "7775145334"
-TELEGRAM_CHAT_ID = "1003812569294"
+TELEGRAM_CHAT_ID = "7775145334"
 
 # --- 1. MEGA PATTERN SCANNER (Candlestick + Advanced Chart Patterns) ---
 def check_patterns(df):
