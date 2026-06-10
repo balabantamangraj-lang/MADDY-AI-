@@ -1,119 +1,15 @@
 import streamlit as st
 import yfinance as yf
-import pandas_ta as ta
+import pandas as pd
+import numpy as np
 import requests
 import time
-from datetime import date
 
-# 🛑 AAPKI TELEGRAM KEYS
-TELEGRAM_CHAT_ID = "7775145334"
+# 🛑 AAPKI TELEGRAM KEYS (Auto-Integrated)
+TELEGRAM_TOKEN = "8512309562:AAGxWXADZfyzaH6fB4vuaIORRERnZ_QV664"
+TELEGRAM_CHAT_ID = "-1003812569294"
 
-# --- 1. MEGA PATTERN SCANNER (Candlestick + Advanced Chart Patterns) ---
-def check_patterns(df):
-    if len(df) < 25: return "", 0, 0, 0 
-    
-    prev2, prev, curr = df.iloc[-3], df.iloc[-2], df.iloc[-1]
-    
-    # Basic Candlestick Math
-    body = abs(curr['Close'] - curr['Open'])
-    lower_wick = min(curr['Open'], curr['Close']) - curr['Low']
-    upper_wick = curr['High'] - max(curr['Open'], curr['Close'])
-    
-    pattern, entry, sl, target = "", 0, 0, 0
-
-    # ==========================================
-    # 🌟 ADVANCED CHART PATTERNS (Macro Vision)
-    # ==========================================
-    
-    # 1. 📦 THE PRESSURE COOKER (Consolidation Box Breakout)
-    last_20_days = df.iloc[-21:-1] 
-    box_high = last_20_days['High'].max()
-    box_low = last_20_days['Low'].min()
-    box_range_percent = ((box_high - box_low) / box_low) * 100
-    
-    if box_range_percent < 6.0 and curr['Close'] > box_high:
-        pattern = "📦 Pressure Cooker (Box Breakout) BUY"
-        entry = curr['Close'] + 0.50
-        sl = box_low 
-        target = entry + (2 * (entry - sl))
-        return pattern, entry, sl, target
-
-    # 2. 📈 THE "W" PATTERN (Double Bottom Reversal)
-    recent_support = df['Low'].iloc[-20:-5].min()
-    if curr['Close'] > prev['Close'] and (curr['Low'] <= recent_support * 1.01) and (curr['Low'] >= recent_support * 0.99):
-         pattern = "📈 'W' Pattern (Double Bottom) BUY"
-         entry = curr['High'] + 0.50
-         sl = recent_support * 0.99 
-         target = entry + (2 * (entry - sl))
-         return pattern, entry, sl, target
-
-    # ==========================================
-    # 🕯️ CANDLESTICK PATTERNS (Micro Vision)
-    # ==========================================
-    
-    # 1. ⚖️ DOJI
-    if body <= (curr['High'] - curr['Low']) * 0.1:
-        pattern = "⚖️ Doji Pattern"
-        entry = curr['High'] + 0.50
-        sl = curr['Low'] - 0.50
-        
-    # 2. ☄️ SHOOTING STAR (SELL)
-    elif upper_wick > (2 * body) and lower_wick < (0.5 * body) and (curr['Close'] < prev['Close']):
-        pattern = "☄️ Shooting Star (SELL)"
-        entry = curr['Low'] - 0.50
-        sl = curr['High'] + 0.50
-        
-    # 3. 🩸 BEARISH ENGULFING (SELL)
-    elif (prev['Close'] > prev['Open']) and (curr['Close'] < curr['Open']) and \
-         (curr['Open'] >= prev['Close']) and (curr['Close'] <= prev['Open']):
-        pattern = "🩸 Bearish Engulfing (SELL)"
-        entry = curr['Low'] - 0.50
-        sl = curr['High'] + 0.50
-
-    # 4. 🌙 EVENING STAR (SELL)
-    elif (prev2['Close'] > prev2['Open']) and \
-         (curr['Close'] < curr['Open']) and (curr['Close'] < (prev2['Open'] + prev2['Close']) / 2):
-        pattern = "🌙 Evening Star (SELL)"
-        entry = curr['Low'] - 0.50
-        sl = curr['High'] + 0.50
-
-    # 5. 🌅 MORNING STAR (BUY)
-    elif (prev2['Close'] < prev2['Open']) and \
-         (curr['Close'] > curr['Open']) and (curr['Close'] > (prev2['Open'] + prev2['Close']) / 2):
-        pattern = "🌅 Morning Star (BUY)"
-        entry = curr['High'] + 0.50
-        sl = min(prev['Low'], curr['Low']) - 0.50
-        
-    # 6. 🔥 BULLISH ENGULFING (BUY)
-    elif (prev['Close'] < prev['Open']) and (curr['Close'] > curr['Open']) and \
-         (curr['Open'] <= prev['Close']) and (curr['Close'] >= prev['Open']):
-        pattern = "🔥 Bullish Engulfing (BUY)"
-        entry = curr['High'] + 0.50
-        sl = curr['Low'] - 0.50
-        
-    # 7. 🔨 HAMMER (BUY)
-    elif lower_wick > (2 * body) and upper_wick < (0.5 * body) and (curr['Close'] > prev['Close']):
-        pattern = "🔨 Hammer (BUY)"
-        entry = curr['High'] + 0.50
-        sl = curr['Low'] - 0.50
-        
-    # 8. ⚔️ PIERCING LINE (BUY)
-    elif (prev['Close'] < prev['Open']) and (curr['Close'] > curr['Open']) and \
-         (curr['Open'] < prev['Low']) and (curr['Close'] > (prev['Open'] + prev['Close'])/2):
-        pattern = "⚔️ Piercing Line (BUY)"
-        entry = curr['High'] + 0.50
-        sl = curr['Low'] - 0.50
-
-    # --- Target Calculation ---
-    if pattern != "":
-        if "SELL" in pattern:
-            target = entry - (2 * abs(sl - entry)) 
-        else:
-            target = entry + (2 * abs(entry - sl)) 
-
-    return pattern, entry, sl, target 
-
-# --- 2. TELEGRAM ALERT ENGINE ---
+# --- TELEGRAM ALERT ENGINE ---
 def send_telegram_alert(bot_message):
     try:
         url = f"https://api.telegram.org/bot{TELEGRAM_TOKEN}/sendMessage"
@@ -122,90 +18,156 @@ def send_telegram_alert(bot_message):
     except Exception as e:
         pass
 
-# --- Page UI Settings ---
-st.set_page_config(page_title="Maddy AI Sniper", layout="wide")
-st.markdown("<h1 style='text-align: center; color: #00FFCC;'>🛡️ Maddy AI: Pro Sniper Radar</h1>", unsafe_allow_html=True)
+# --- CUSTOM INDICATORS MATH ---
+def calculate_rsi(data, window=14):
+    delta = data.diff()
+    gain = (delta.where(delta > 0, 0)).rolling(window=window).mean()
+    loss = (-delta.where(delta < 0, 0)).rolling(window=window).mean()
+    rs = gain / loss
+    return 100 - (100 / (1 + rs))
 
-# Memory Setup
+def calculate_atr(df, window=14):
+    high_low = df['High'] - df['Low']
+    high_close = np.abs(df['High'] - df['Close'].shift())
+    low_close = np.abs(df['Low'] - df['Close'].shift())
+    ranges = pd.concat([high_low, high_close, low_close], axis=1)
+    true_range = np.max(ranges, axis=1)
+    return true_range.rolling(window).mean()
+
+# --- UI SETUP ---
+st.set_page_config(page_title="Maddy AI Pro Engine", layout="wide")
+st.title("🦅 Maddy AI: Pro Sniper Dashboard V2.0")
+st.write("🔥 Institutional Accuracy | ATR Stoploss | RSI Momentum Filter 🔥")
+
+# Spam Control Memory
 if 'alerted_today' not in st.session_state:
     st.session_state.alerted_today = {}
 
-# 🔥 Watchlist (Top 10 High Volume Stocks)
 watchlist = [
-    "RELIANCE.NS", "TCS.NS", "INFY.NS", "HDFCBANK.NS", "ICICIBANK.NS", 
-    "HCLTECH.NS", "ITC.NS", "SBIN.NS", "BHARTIARTL.NS", "BAJFINANCE.NS"
+    "HDFCBANK.NS", "ICICIBANK.NS", "SBIN.NS", "AXISBANK.NS", "BAJFINANCE.NS", 
+    "KOTAKBANK.NS", "RELIANCE.NS", "TCS.NS", "INFY.NS", "HCLTECH.NS", 
+    "TATAMOTORS.NS", "M&M.NS", "ITC.NS", "TITAN.NS", "ZOMATO.NS"
 ]
 
-cols = st.columns(3)
-
-for i, stock in enumerate(watchlist):
-    with cols[i % 3]:
+if st.button("🚨 Run High-Accuracy Scan"):
+    st.divider()
+    col1, col2 = st.columns(2)
+    with col1:
+        st.subheader("⚡ INTRADAY SNIPER (15-Min)")
+    with col2:
+        st.subheader("🚀 SWING ROCKET (1-Day)")
+        
+    intraday_found = False
+    swing_found = False
+    
+    # Global Sector Sync (Nifty Mood) - Fixed with 1mo Data for proper EMA_9
+    with st.spinner("⏳ Decoding Nifty Institutional Mood..."):
         try:
-            time.sleep(0.5) 
-            ticker = yf.Ticker(stock)
-            df = ticker.history(period="1mo", interval="15m")
+            nifty = yf.download("^NSEI", period="1mo", interval="1d", progress=False)
+            nifty['EMA_9'] = nifty['Close'].ewm(span=9, adjust=False).mean()
+            nifty_mood = "POSITIVE" if nifty.iloc[-1]['Close'].values[0] > nifty.iloc[-1]['EMA_9'].values[0] else "NEGATIVE"
+        except:
+            nifty_mood = "NEUTRAL"
+
+    st.info(f"🧭 **Nifty Market Trend:** {nifty_mood}")
+    progress_bar = st.progress(0)
+    
+    for i, stock in enumerate(watchlist):
+        try:
+            # ==========================================
+            # 1. DAILY DATA (HTF Trend & Swing)
+            # ==========================================
+            df_daily = yf.download(stock, period="1y", interval="1d", progress=False)
+            if isinstance(df_daily.columns, pd.MultiIndex): df_daily.columns = df_daily.columns.droplevel(1)
+            df_daily = df_daily.dropna()
             
-            if not df.empty and len(df) > 25:
-                
-                # --- ACCURACY INDICATORS (VWAP + VOLUME) ---
-                rsi = ta.rsi(df['Close']).iloc[-1]
-                ema_200 = ta.ema(df['Close'], length=200).iloc[-1]
-                price = round(df['Close'].iloc[-1], 2)
-                
-                vol_current = df['Volume'].iloc[-1]
-                vol_avg = df['Volume'].rolling(20).mean().iloc[-1]
+            # Indicators
+            df_daily['EMA_50'] = df_daily['Close'].ewm(span=50, adjust=False).mean()
+            df_daily['EMA_200'] = df_daily['Close'].ewm(span=200, adjust=False).mean()
+            df_daily['52W_High'] = df_daily['High'].rolling(window=200).max().shift(1)
+            df_daily['Vol_MA20'] = df_daily['Volume'].rolling(window=20).mean().shift(1)
+            df_daily['RSI'] = calculate_rsi(df_daily['Close'])
+            df_daily['ATR'] = calculate_atr(df_daily)
+            
+            today_d = df_daily.iloc[-1]
+            
+            # --- HIGH-ACCURACY SWING LOGIC ---
+            s_trend = today_d['Close'] > today_d['EMA_50'] and today_d['EMA_50'] > today_d['EMA_200']
+            s_breakout = today_d['Close'] >= (today_d['52W_High'] * 0.98) 
+            s_volume = today_d['Volume'] > (2.0 * today_d['Vol_MA20'])
+            s_rsi = 60 <= today_d['RSI'] <= 80
+            
+            if s_breakout and s_volume and s_trend and s_rsi and nifty_mood == "POSITIVE":
+                with col2:
+                    st.success(f"🔥 **[SWING]** {stock} | CMP: ₹{round(today_d['Close'],2)}")
+                    st.write(f"✅ 2X Operator Volume | RSI: {round(today_d['RSI'],1)}")
+                    atr_val = today_d['ATR']
+                    entry = today_d['Close']
+                    sl = entry - (2 * atr_val)  
+                    tgt = entry + (4 * atr_val) 
+                    st.info(f"🎯 Target: ₹{round(tgt,2)} | 🛑 SL: ₹{round(sl,2)}")
+                    swing_found = True
 
-                # VWAP Calculation (Institutional Baseline)
-                df['Typical_Price'] = (df['High'] + df['Low'] + df['Close']) / 3
-                df['VWAP'] = (df['Typical_Price'] * df['Volume']).cumsum() / df['Volume'].cumsum()
-                vwap_current = df['VWAP'].iloc[-1]
+                    # 📤 TELEGRAM SWING ALERT
+                    if f"{stock}_swing" not in st.session_state.alerted_today:
+                        msg = f"🚀 *MADDY VIP SWING ROCKET* 🚀\n\n" \
+                              f"✅ *Stock:* {stock}\n" \
+                              f"💰 *CMP:* ₹{round(entry, 2)}\n" \
+                              f"📈 *TARGET:* ₹{round(tgt, 2)}\n" \
+                              f"🛑 *STOP LOSS:* ₹{round(sl, 2)}\n\n" \
+                              f"🔥 _2X Operator Volume & 52W Breakout Verified!_"
+                        send_telegram_alert(msg)
+                        st.session_state.alerted_today[f"{stock}_swing"] = True
 
-                st.metric(label=f"📊 {stock}", value=f"₹{price}")
+            # ==========================================
+            # 2. INTRADAY DATA (15-Min Precision)
+            # ==========================================
+            df_15m = yf.download(stock, period="5d", interval="15m", progress=False)
+            if isinstance(df_15m.columns, pd.MultiIndex): df_15m.columns = df_15m.columns.droplevel(1)
+            df_15m = df_15m.dropna()
+            
+            df_15m['VWAP'] = (df_15m['Close'] * df_15m['Volume']).cumsum() / df_15m['Volume'].cumsum()
+            df_15m['Support_Zone'] = df_15m['Low'].rolling(window=50).min().shift(1)
+            df_15m['Vol_MA'] = df_15m['Volume'].rolling(window=10).mean().shift(1)
+            df_15m['RSI'] = calculate_rsi(df_15m['Close'])
+            
+            today_15m = df_15m.iloc[-1]
+            
+            # --- HIGH-ACCURACY INTRADAY LOGIC ---
+            i_htf_trend = today_d['Close'] > today_d['EMA_200'] 
+            i_vwap = today_15m['Close'] > today_15m['VWAP']     
+            is_green_candle = today_15m['Close'] > today_15m['Open']
+            at_support = today_15m['Low'] <= (today_15m['Support_Zone'] * 1.002)
+            i_rsi = 45 <= today_15m['RSI'] <= 65 
+            i_vol = today_15m['Volume'] > (1.5 * today_15m['Vol_MA'])
+            
+            if at_support and is_green_candle and i_vwap and i_htf_trend and i_rsi and i_vol and nifty_mood == "POSITIVE":
+                with col1:
+                    st.success(f"🟢 **[INTRADAY]** {stock} | CMP: ₹{round(today_15m['Close'],2)}")
+                    st.write(f"✅ Green Support Bounce | Price > VWAP")
+                    st.write(f"✅ 1.5x Vol Spike | RSI: {round(today_15m['RSI'],1)}")
+                    st.info(f"🎯 Enter Above: ₹{round(today_15m['High'],2)} | 🛑 SL: ₹{round(today_15m['Low'],2)}")
+                    intraday_found = True
 
-                # Pattern Scan
-                pattern_name, entry_price, sl_price, target_price = check_patterns(df)
-
-                # ✅ STRICT RULE ENGINE (Accuracy First)
-                if pattern_name != "":
-                    is_valid_trade = False
-                    trade_type = ""
+                    # 📤 TELEGRAM INTRADAY ALERT
+                    if f"{stock}_intra" not in st.session_state.alerted_today:
+                        msg = f"🟢 *MADDY VIP INTRADAY SNIPER* 🟢\n\n" \
+                              f"✅ *Stock:* {stock}\n" \
+                              f"💰 *CMP:* ₹{round(today_15m['Close'], 2)}\n" \
+                              f"🎯 *ENTRY ABOVE:* ₹{round(today_15m['High'], 2)}\n" \
+                              f"🛑 *STOP LOSS:* ₹{round(today_15m['Low'], 2)}\n\n" \
+                              f"⚖️ _VWAP Bounce & Volume Spike Confirmed!_"
+                        send_telegram_alert(msg)
+                        st.session_state.alerted_today[f"{stock}_intra"] = True
                     
-                    # 🟢 STRICT BUY LOGIC
-                    if "BUY" in pattern_name:
-                        # Rule: Price > EMA, Price > VWAP, RSI > 55, Volume 1.5x (150%)
-                        if price > ema_200 and price > vwap_current and rsi > 55 and vol_current > (vol_avg * 1.5):
-                            is_valid_trade = True
-                            trade_type = "🟢 BUY"
-                    
-                    # 🔴 STRICT SELL LOGIC
-                    elif "SELL" in pattern_name:
-                        # Rule: Price < EMA, Price < VWAP, RSI < 45, Volume 1.5x (150%)
-                        if price < ema_200 and price < vwap_current and rsi < 45 and vol_current > (vol_avg * 1.5):
-                            is_valid_trade = True
-                            trade_type = "🔴 SELL"
-                    
-                    if is_valid_trade:
-                        st.success(f"🎯 PRO SETUP: {pattern_name}")
-                        st.write(f"{trade_type}: ₹{round(entry_price, 2)} | 🛑 SL: ₹{round(sl_price, 2)}")
-                        st.write(f"📈 Target: ₹{round(target_price, 2)}")
-
-                        if stock not in st.session_state.alerted_today:
-                            msg = f"🚀 *MADDY VIP ALERT (SNIPER MODE)* 🚀\n\n" \
-                                  f"✅ *Stock:* {stock}\n" \
-                                  f"🎯 *Pattern:* {pattern_name}\n\n" \
-                                  f"{trade_type} *ABOVE/BELOW:* ₹{round(entry_price, 2)}\n" \
-                                  f"🛑 *STOP LOSS:* ₹{round(sl_price, 2)}\n" \
-                                  f"📈 *TARGET:* ₹{round(target_price, 2)}\n\n" \
-                                  f"⚖️ *VWAP & 1.5x Volume Confirmed* 🛡️"
-                            
-                            send_telegram_alert(msg)
-                            st.session_state.alerted_today[stock] = True
-                else:
-                    st.info("⚪ Searching Sniper Setups...")
         except Exception as e:
-            st.warning(f"⚠️ {stock} Scanning...")
+            pass 
+            
+        progress_bar.progress((i + 1) / len(watchlist))
 
-st.divider()
-st.subheader("💡 Active Sniper Filters")
-st.info("🎯 VWAP Filter Active | 📊 1.5x Volume Blast Required | 📈 Strict RSI & EMA Trend")
-             
+    st.divider()
+    if not intraday_found:
+        with col1: st.warning("🔍 Intraday: No setups right now. Waiting for perfect VWAP bounce.")
+    if not swing_found:
+        with col2: st.warning("🔍 Swing: No strong volume breakouts today.")
+            
