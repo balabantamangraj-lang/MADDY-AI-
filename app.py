@@ -5,18 +5,17 @@ import numpy as np
 import requests
 import time
 
-# 🛑 AAPKI TELEGRAM KEYS (Auto-Integrated)
-TELEGRAM_TOKEN = "8512309562:AAGxWXADZfyzaH6fB4vuaIORRERnZ_QV664"
+# 🛑 YAHAN APNA NAYA REGENERATED TOKEN DAALEIN!
+TELEGRAM_TOKEN = "NAYA_TOKEN_YAHAN_DAALEIN"
 TELEGRAM_CHAT_ID = "-1003812569294"
 
-# --- TELEGRAM ALERT ENGINE ---
 def send_telegram_alert(bot_message):
     try:
         url = f"https://api.telegram.org/bot{TELEGRAM_TOKEN}/sendMessage"
         data = {"chat_id": TELEGRAM_CHAT_ID, "text": bot_message, "parse_mode": "Markdown"}
         requests.post(url, data=data)
     except Exception as e:
-        pass
+        st.error(f"Telegram Alert Failed: {e}") # Naya Error Fix
 
 # --- CUSTOM INDICATORS MATH ---
 def calculate_rsi(data, window=14):
@@ -36,10 +35,14 @@ def calculate_atr(df, window=14):
 
 # --- UI SETUP ---
 st.set_page_config(page_title="Maddy AI Pro Engine", layout="wide")
-st.title("🦅 Maddy AI: Pro Sniper Dashboard V2.0")
-st.write("🔥 Institutional Accuracy | ATR Stoploss | RSI Momentum Filter 🔥")
+st.title("🦅 Maddy AI: Pro Sniper Dashboard V2.1")
+st.write("🔥 Institutional Accuracy | ATR Stoploss | Auto-Pilot Ready 🔥")
 
-# Spam Control Memory
+# 🤖 AUTO-PILOT MODE (Naya Feature)
+auto_refresh = st.sidebar.checkbox("🤖 Enable Auto-Pilot (Scan every 5 mins)")
+if auto_refresh:
+    st.sidebar.success("Auto-Pilot Active! Maddy is watching the market... 🟢")
+
 if 'alerted_today' not in st.session_state:
     st.session_state.alerted_today = {}
 
@@ -49,7 +52,7 @@ watchlist = [
     "TATAMOTORS.NS", "M&M.NS", "ITC.NS", "TITAN.NS", "ZOMATO.NS"
 ]
 
-if st.button("🚨 Run High-Accuracy Scan"):
+if st.button("🚨 Run High-Accuracy Scan") or auto_refresh:
     st.divider()
     col1, col2 = st.columns(2)
     with col1:
@@ -60,28 +63,25 @@ if st.button("🚨 Run High-Accuracy Scan"):
     intraday_found = False
     swing_found = False
     
-    # Global Sector Sync (Nifty Mood) - Fixed with 1mo Data for proper EMA_9
     with st.spinner("⏳ Decoding Nifty Institutional Mood..."):
         try:
             nifty = yf.download("^NSEI", period="1mo", interval="1d", progress=False)
             nifty['EMA_9'] = nifty['Close'].ewm(span=9, adjust=False).mean()
-            nifty_mood = "POSITIVE" if nifty.iloc[-1]['Close'].values[0] > nifty.iloc[-1]['EMA_9'].values[0] else "NEGATIVE"
-        except:
+            # 🐛 Nifty Mood Bug Fixed! (No more .values[0] errors)
+            nifty_mood = "POSITIVE" if nifty['Close'].iloc[-1] > nifty['EMA_9'].iloc[-1] else "NEGATIVE"
+        except Exception as e:
             nifty_mood = "NEUTRAL"
+            st.warning(f"Nifty Sync Issue: {e}")
 
     st.info(f"🧭 **Nifty Market Trend:** {nifty_mood}")
     progress_bar = st.progress(0)
     
     for i, stock in enumerate(watchlist):
         try:
-            # ==========================================
-            # 1. DAILY DATA (HTF Trend & Swing)
-            # ==========================================
             df_daily = yf.download(stock, period="1y", interval="1d", progress=False)
             if isinstance(df_daily.columns, pd.MultiIndex): df_daily.columns = df_daily.columns.droplevel(1)
             df_daily = df_daily.dropna()
             
-            # Indicators
             df_daily['EMA_50'] = df_daily['Close'].ewm(span=50, adjust=False).mean()
             df_daily['EMA_200'] = df_daily['Close'].ewm(span=200, adjust=False).mean()
             df_daily['52W_High'] = df_daily['High'].rolling(window=200).max().shift(1)
@@ -91,7 +91,6 @@ if st.button("🚨 Run High-Accuracy Scan"):
             
             today_d = df_daily.iloc[-1]
             
-            # --- HIGH-ACCURACY SWING LOGIC ---
             s_trend = today_d['Close'] > today_d['EMA_50'] and today_d['EMA_50'] > today_d['EMA_200']
             s_breakout = today_d['Close'] >= (today_d['52W_High'] * 0.98) 
             s_volume = today_d['Volume'] > (2.0 * today_d['Vol_MA20'])
@@ -108,20 +107,11 @@ if st.button("🚨 Run High-Accuracy Scan"):
                     st.info(f"🎯 Target: ₹{round(tgt,2)} | 🛑 SL: ₹{round(sl,2)}")
                     swing_found = True
 
-                    # 📤 TELEGRAM SWING ALERT
                     if f"{stock}_swing" not in st.session_state.alerted_today:
-                        msg = f"🚀 *MADDY VIP SWING ROCKET* 🚀\n\n" \
-                              f"✅ *Stock:* {stock}\n" \
-                              f"💰 *CMP:* ₹{round(entry, 2)}\n" \
-                              f"📈 *TARGET:* ₹{round(tgt, 2)}\n" \
-                              f"🛑 *STOP LOSS:* ₹{round(sl, 2)}\n\n" \
-                              f"🔥 _2X Operator Volume & 52W Breakout Verified!_"
+                        msg = f"🚀 *MADDY VIP SWING ROCKET* 🚀\n✅ *Stock:* {stock}\n💰 *CMP:* ₹{round(entry, 2)}\n📈 *TARGET:* ₹{round(tgt, 2)}\n🛑 *STOP LOSS:* ₹{round(sl, 2)}\n🔥 _2X Volume Verified!_"
                         send_telegram_alert(msg)
                         st.session_state.alerted_today[f"{stock}_swing"] = True
 
-            # ==========================================
-            # 2. INTRADAY DATA (15-Min Precision)
-            # ==========================================
             df_15m = yf.download(stock, period="5d", interval="15m", progress=False)
             if isinstance(df_15m.columns, pd.MultiIndex): df_15m.columns = df_15m.columns.droplevel(1)
             df_15m = df_15m.dropna()
@@ -133,7 +123,6 @@ if st.button("🚨 Run High-Accuracy Scan"):
             
             today_15m = df_15m.iloc[-1]
             
-            # --- HIGH-ACCURACY INTRADAY LOGIC ---
             i_htf_trend = today_d['Close'] > today_d['EMA_200'] 
             i_vwap = today_15m['Close'] > today_15m['VWAP']     
             is_green_candle = today_15m['Close'] > today_15m['Open']
@@ -149,25 +138,25 @@ if st.button("🚨 Run High-Accuracy Scan"):
                     st.info(f"🎯 Enter Above: ₹{round(today_15m['High'],2)} | 🛑 SL: ₹{round(today_15m['Low'],2)}")
                     intraday_found = True
 
-                    # 📤 TELEGRAM INTRADAY ALERT
                     if f"{stock}_intra" not in st.session_state.alerted_today:
-                        msg = f"🟢 *MADDY VIP INTRADAY SNIPER* 🟢\n\n" \
-                              f"✅ *Stock:* {stock}\n" \
-                              f"💰 *CMP:* ₹{round(today_15m['Close'], 2)}\n" \
-                              f"🎯 *ENTRY ABOVE:* ₹{round(today_15m['High'], 2)}\n" \
-                              f"🛑 *STOP LOSS:* ₹{round(today_15m['Low'], 2)}\n\n" \
-                              f"⚖️ _VWAP Bounce & Volume Spike Confirmed!_"
+                        msg = f"🟢 *MADDY VIP INTRADAY SNIPER* 🟢\n✅ *Stock:* {stock}\n💰 *CMP:* ₹{round(today_15m['Close'], 2)}\n🎯 *ENTRY ABOVE:* ₹{round(today_15m['High'], 2)}\n🛑 *STOP LOSS:* ₹{round(today_15m['Low'], 2)}\n⚖️ _VWAP Bounce Confirmed!_"
                         send_telegram_alert(msg)
                         st.session_state.alerted_today[f"{stock}_intra"] = True
                     
         except Exception as e:
-            pass 
+            # 🐛 Error Hiding Bug Fixed! Ab chupne ki jagah warning aayegi.
+            st.warning(f"⚠️ {stock} skipped due to error: {e}")
             
         progress_bar.progress((i + 1) / len(watchlist))
 
     st.divider()
     if not intraday_found:
-        with col1: st.warning("🔍 Intraday: No setups right now. Waiting for perfect VWAP bounce.")
+        with col1: st.info("🔍 Intraday: No perfect setups right now.")
     if not swing_found:
-        with col2: st.warning("🔍 Swing: No strong volume breakouts today.")
-            
+        with col2: st.info("🔍 Swing: No strong volume breakouts today.")
+
+# ⏱️ Auto-Pilot Loop (Agar on hai toh 5 min baad refresh hoga)
+if auto_refresh:
+    time.sleep(300)
+    st.rerun()
+    
