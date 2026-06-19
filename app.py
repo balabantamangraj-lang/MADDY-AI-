@@ -272,7 +272,7 @@ if st.button("🚨 Run Apex Execution Tick"):
                     if stock_return <= 0: continue # If Nifty is flat/down slightly, stock must be up
             else:
                 if stock_return <= 0: continue 
-                
+                    
             df_1d['EMA_20'] = df_1d['Close'].ewm(span=20).mean()
             df_1d['Vol_MA20'] = df_1d['Volume'].rolling(20).mean().shift(1)
             df_1d['ATR'] = calculate_wilders_atr(df_1d) 
