@@ -226,10 +226,13 @@ if st.button("🚨 Run Apex Execution Tick"):
     
     st.divider()
     col_sig, col_log = st.columns([2, 1])
-    with col_sig: st.subheader("⚡ Live Alpha Scans")
-    with col_log: st.subheader("📂 Compounding Portfolio DB")
-        
-        progress_bar = st.progress(0)
+    with col_sig:
+    st.subheader("⚡ Live Alpha Scans")
+
+with col_log:
+    st.subheader("📂 Compounding Portfolio DB")
+
+progress_bar = st.progress(0)
     nifty_df = fetch_stock_data("^NSEI", "3mo", "1d")
     bn_df = fetch_stock_data("^NSEBANK", "3mo", "1d")
     vix_df = fetch_stock_data("^INDIAVIX", "3mo", "1d")
@@ -259,7 +262,15 @@ if st.button("🚨 Run Apex Execution Tick"):
     nifty_return = (nifty_df['Close'].iloc[-1] / nifty_df['Close'].iloc[-20]) - 1 if len(nifty_df) >= 20 else 0
     
     market_regime = "Bullish" if is_bull_market else "Bearish"
-    market_score = 10 if is_bull_market else -15 
+    else:
+    is_bull_market = (nifty_df['Close'].iloc[-1] > nifty_df['Close'].ewm(span=50).mean().iloc[-1]) and \
+                     (bn_df['Close'].iloc[-1] > bn_df['Close'].ewm(span=50).mean().iloc[-1]) and \
+                     (vix_df['Close'].iloc[-1] < 20)
+
+nifty_return = (nifty_df['Close'].iloc[-1] / nifty_df['Close'].iloc[-20]) - 1 if len(nifty_df) >= 20 else 0
+
+market_regime = "Bullish" if is_bull_market else "Bearish"
+market_score = 10 if is_bull_market else -15
     
     else:
         is_bull_market = (nifty_df['Close'].iloc[-1] > nifty_df['Close'].ewm(span=50).mean().iloc[-1]) and \
