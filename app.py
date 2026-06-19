@@ -228,7 +228,6 @@ if st.button("🚨 Run Apex Execution Tick"):
     col_sig, col_log = st.columns([2, 1])
     with col_sig:
     st.subheader("⚡ Live Alpha Scans")
-
 with col_log:
     st.subheader("📂 Compounding Portfolio DB")
 
