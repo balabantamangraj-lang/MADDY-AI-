@@ -197,7 +197,7 @@ if not nifty_hist.empty:
 
     bench_dd = ((nifty_peak - bench_equity) / nifty_peak) * 100 if nifty_peak > 0 else 0
         
-        portfolio["daily_log"].append({
+    portfolio["daily_log"].append({
             'date': date, 'equity': portfolio["equity"], 'cash': portfolio["cash"], 
             'exposure': exposure, 'positions_count': len(portfolio["positions"]), 
             'heat': current_heat / max(portfolio["equity"], 1), 'drawdown': current_dd,
