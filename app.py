@@ -205,7 +205,7 @@ if not nifty_hist.empty:
         })
 
         # Scan Universe
-        open_trades = [{"symbol": s} for s in portfolio["positions"]] 
+    open_trades = [{"symbol": s} for s in portfolio["positions"]] 
         for sym in WATCHLIST:
             if sym in portfolio["positions"] or date not in data_dict[sym].index: continue
             hist = data_dict[sym].loc[:date]
