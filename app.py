@@ -255,7 +255,7 @@ if not nifty_hist.empty:
     nifty_cagr = ((nifty_df['Close'].iloc[-1] / nifty_df['Close'].iloc[0]) ** (365.25/days) - 1) * 100 if not nifty_df.empty and days > 0 else 0
     portfolio["benchmark"] = {"Nifty_CAGR_%": nifty_cagr, "Alpha_%": alpha, "Beta": beta}
     
-    return portfolio
+     return portfolio
 
 # --- 4. BLOCK-BOOTSTRAP MONTE CARLO ---
 def run_monte_carlo(trades_df, initial_capital=100000, simulations=1000, block_size=5):
