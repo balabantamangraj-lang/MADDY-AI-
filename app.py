@@ -193,7 +193,7 @@ if not nifty_hist.empty:
     # np.squeeze aur float() use karke Series ko wapas normal number banaya
     bench_equity = float(nifty_shares * np.squeeze(nifty_hist['Close'].iloc[-1]))
         
-        nifty_peak = max(nifty_peak, bench_equity)
+       nifty_peak = max(nifty_peak, bench_equity)
 
         bench_dd = ((nifty_peak - bench_equity) / nifty_peak) * 100 if nifty_peak > 0 else 0
         
