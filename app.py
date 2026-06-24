@@ -2,7 +2,7 @@ import pandas as pd, numpy as np, yfinance as yf
 from datetime import datetime
 import itertools
 import warnings
-warnings.filterwarnings('ignore') # To keep terminal clean from yfinance warnings
+warnings.filterwarnings('ignore')
 
 # --- 1. CONFIGURATION & UNIVERSE ---
 INITIAL_CAPITAL = 100000
@@ -48,8 +48,14 @@ def run_portfolio_backtest(data_dict, nifty_df, timeline, sl_mult=2.0, tp_mult=4
     stop_trading = False
     
     peak_equity = INITIAL_CAPITAL
-    nifty_shares = INITIAL_CAPITAL / float(np.squeeze(nifty_df['Close'].iloc[0])) if not nifty_df.empty else 0
     
+    # Safely extract initial nifty price
+    if not nifty_df.empty:
+        initial_nifty_price = float(np.squeeze(nifty_df['Close'].iloc[0]))
+        nifty_shares = INITIAL_CAPITAL / initial_nifty_price if initial_nifty_price > 0 else 0
+    else:
+        nifty_shares = 0
+        
     nifty_peak = INITIAL_CAPITAL
     
     for i, date in enumerate(timeline):
@@ -148,7 +154,7 @@ def run_portfolio_backtest(data_dict, nifty_df, timeline, sl_mult=2.0, tp_mult=4
             sector_invested = sum((p['buy_value']) for s, p in portfolio["positions"].items() if WATCHLIST.get(s) == sector)
             new_sector_exposure = (sector_invested + trade_val) / safe_equity
             
-            # Correlation Check (Look-ahead bias fixed)
+            # Correlation Check
             corr_safe = True
             hist_new = data_dict[sym].loc[:date, 'Close'].pct_change().dropna().tail(30)
             for open_sym in portfolio["positions"]:
@@ -189,15 +195,13 @@ def run_portfolio_backtest(data_dict, nifty_df, timeline, sl_mult=2.0, tp_mult=4
         current_dd = ((peak_equity - portfolio["equity"]) / peak_equity) * 100 if peak_equity > 0 else 0
         
         bench_equity = nifty_peak
-if not nifty_hist.empty:
-    # np.squeeze aur float() use karke Series ko wapas normal number banaya
-    bench_equity = float(nifty_shares * np.squeeze(nifty_hist['Close'].iloc[-1]))
-        
-    nifty_peak = max(nifty_peak, bench_equity)
-
-    bench_dd = ((nifty_peak - bench_equity) / nifty_peak) * 100 if nifty_peak > 0 else 0
-        
-    portfolio["daily_log"].append({
+        if not nifty_hist.empty:
+            bench_equity = float(nifty_shares * np.squeeze(nifty_hist['Close'].iloc[-1]))
+            
+        nifty_peak = max(nifty_peak, bench_equity)
+        bench_dd = ((nifty_peak - bench_equity) / nifty_peak) * 100 if nifty_peak > 0 else 0
+            
+        portfolio["daily_log"].append({
             'date': date, 'equity': portfolio["equity"], 'cash': portfolio["cash"], 
             'exposure': exposure, 'positions_count': len(portfolio["positions"]), 
             'heat': current_heat / max(portfolio["equity"], 1), 'drawdown': current_dd,
@@ -205,8 +209,8 @@ if not nifty_hist.empty:
         })
 
         # Scan Universe
-    open_trades = [{"symbol": s} for s in portfolio["positions"]] 
-    for sym in WATCHLIST:
+        open_trades = [{"symbol": s} for s in portfolio["positions"]] 
+        for sym in WATCHLIST:
             if sym in portfolio["positions"] or date not in data_dict[sym].index: continue
             hist = data_dict[sym].loc[:date]
             if len(hist) < 250: continue 
@@ -220,8 +224,10 @@ if not nifty_hist.empty:
     # EOD Force Close Remaining
     last_date = timeline[-1]
     for sym, pos in list(portfolio["positions"].items()):
-        try: final_p = data_dict[sym]['Close'].iloc[-1] * (1 - SLIPPAGE)
-        except: final_p = pos['entry']
+        try: 
+            final_p = data_dict[sym]['Close'].iloc[-1] * (1 - SLIPPAGE)
+        except: 
+            final_p = pos['entry']
             
         sell_val = final_p * pos['qty']
         sell_comm = sell_val * COMMISSION
@@ -236,101 +242,5 @@ if not nifty_hist.empty:
 
     # Exact CAPM Alpha & Beta
     df_log = pd.DataFrame(portfolio["daily_log"])
-    alpha, beta = 0.0, 0.0
-    if not df_log.empty and len(df_log) > 1:
-        port_ret = df_log['equity'].pct_change().dropna()
-        bench_ret = df_log['benchmark_equity'].pct_change().dropna()
-        ret_df = pd.concat([port_ret, bench_ret], axis=1, join='inner').dropna()
-        if len(ret_df) > 1:
-            covar = np.cov(ret_df.iloc[:,0], ret_df.iloc[:,1])[0,1]
-            var = np.var(ret_df.iloc[:,1])
-            if var > 0 and np.isfinite(covar):
-                beta = covar / var
-                rf_daily = RF_RATE / 252
-                excess_port = port_ret.mean() - rf_daily
-                excess_bench = bench_ret.mean() - rf_daily
-                alpha = (excess_port - beta * excess_bench) * 252 * 100
-
-    days = (timeline[-1] - timeline[0]).days
-    nifty_cagr = ((nifty_df['Close'].iloc[-1] / nifty_df['Close'].iloc[0]) ** (365.25/days) - 1) * 100 if not nifty_df.empty and days > 0 else 0
-    portfolio["benchmark"] = {"Nifty_CAGR_%": nifty_cagr, "Alpha_%": alpha, "Beta": beta}
-    
-     return portfolio
-
-# --- 4. BLOCK-BOOTSTRAP MONTE CARLO ---
-def run_monte_carlo(trades_df, initial_capital=100000, simulations=1000, block_size=5):
-    if trades_df.empty: return {}
-    pnls = trades_df['pnl'].values
-    blocks = [pnls[i:i+block_size] for i in range(0, len(pnls), block_size)]
-    if not blocks: return {}
-    
-    sim_results = []
-    ruin_count = 0
-    ruin_threshold = initial_capital * RUIN_THRESHOLD 
-    
-    for _ in range(simulations):
-        sim_blocks = np.random.choice(len(blocks), size=len(blocks), replace=True)
-        sim_trades = np.concatenate([blocks[idx] for idx in sim_blocks])
-        equity_curve = initial_capital + np.cumsum(sim_trades)
+    alpha, beta = 0.0
         
-        peak = np.maximum.accumulate(equity_curve)
-        dd = (peak - equity_curve) / peak
-        
-        if np.any(equity_curve < ruin_threshold): ruin_count += 1
-        sim_results.append({'final_equity': equity_curve[-1], 'max_dd': np.max(dd) if len(dd) > 0 else 0})
-        
-    sim_df = pd.DataFrame(sim_results)
-    return {
-        "Total Simulations": simulations,
-        "Risk of Ruin": f"{(ruin_count/simulations)*100:.2f}%",
-        "Median Max Drawdown": f"{sim_df['max_dd'].median()*100:.2f}%",
-        "99th Percentile Max Drawdown": f"{np.percentile(sim_df['max_dd'], 99)*100:.2f}%",
-        "Pessimistic Final Equity (5th %ile)": f"₹{np.percentile(sim_df['final_equity'], 5):.2f}"
-    }
-
-# --- 5. PARAMETER STABILITY (WFO HEATMAP) ---
-def run_parameter_stability(data_dict, nifty_df, timeline):
-    sl_mults = [1.5, 2.0, 2.5]
-    tp_mults = [3.0, 4.0, 5.0]
-    results = []
-    
-    for sl, tp in itertools.product(sl_mults, tp_mults):
-        print(f"Testing SL: {sl}x | TP: {tp}x...")
-        res = run_portfolio_backtest(data_dict, nifty_df, timeline, sl_mult=sl, tp_mult=tp)
-        trades_df = pd.DataFrame(res.get("trades", []))
-        net_profit = trades_df['pnl'].sum() if not trades_df.empty else 0
-        results.append({"SL Multiplier": sl, "TP Multiplier": tp, "Net Profit": net_profit, "Alpha": res.get("benchmark", {}).get("Alpha_%", 0)})
-        
-    return pd.DataFrame(results).pivot(index='SL Multiplier', columns='TP Multiplier', values='Net Profit')
-
-# --- EXECUTION BLOCK ---
-if __name__ == "__main__":
-    print("Maddy AI V5.0: Initializing Data...")
-    data_dict = {}
-    for sym in WATCHLIST:
-        df = yf.download(sym, period="2y", progress=False, auto_adjust=True)
-        if not df.empty: data_dict[sym] = add_indicators(df)
-        
-    nifty_df = yf.download("^NSEI", period="2y", progress=False, auto_adjust=True)
-    timeline = sorted(set().union(*[df.index for df in data_dict.values()]))
-    
-    print("\n--- 1. RUNNING CORE BACKTEST ---")
-    base_result = run_portfolio_backtest(data_dict, nifty_df, timeline, sl_mult=2.0, tp_mult=4.0)
-    trades_df = pd.DataFrame(base_result.get("trades", []))
-    
-    if not trades_df.empty:
-        print(f"Total Trades Execute: {len(trades_df)}")
-        print(f"Final Portfolio Equity: ₹{base_result['equity']:.2f}")
-        print(f"Nifty CAGR: {base_result['benchmark']['Nifty_CAGR_%']:.2f}% | Alpha: {base_result['benchmark']['Alpha_%']:.2f}% | Beta: {base_result['benchmark']['Beta']:.2f}")
-        
-        print("\n--- 2. RUNNING MONTE CARLO SIMULATION (Block-Bootstrap) ---")
-        mc_stats = run_monte_carlo(trades_df, INITIAL_CAPITAL, simulations=1000, block_size=5)
-        for k, v in mc_stats.items(): print(f"{k}: {v}")
-            
-        print("\n--- 3. PARAMETER STABILITY HEATMAP ---")
-        heatmap = run_parameter_stability(data_dict, nifty_df, timeline)
-        print("\nNet Profit Heatmap (Rows: SL, Columns: TP):")
-        print(heatmap)
-    else:
-        print("Not enough data or no trades executed.")
-            
